@@ -30,3 +30,14 @@ calling `nce_halt_cpu()`.
 
 For detailed information on each API function please check the source:
 [../common/src/nce.c](../common/src/nce.c)
+
+### Coroutine implementation
+
+By default NCE is implemented with host threads (`common/src/nce.c`), as described above.
+Building the runner with `NSI_CPU_BACKEND=coroutines` replaces it (together with NCT) by
+[../common/coro/nsi_cpu_coro.c](../common/coro/nsi_cpu_coro.c), with the same API and
+behavior, but where every embedded CPU and thread is a stackful coroutine on the single host
+thread which also runs the HW models, instead of a host thread.
+"Blocking" a thread then means switching away from its stack, and resuming it means switching
+back to it, which is much cheaper than waking a host thread.
+This implementation supports x86-64, i386 and AArch64 hosts.
