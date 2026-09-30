@@ -20,6 +20,7 @@
 #include "nsi_safe_call.h"
 #include "nsi_hw_scheduler.h"
 #include "nsi_hws_models_if.h"
+#include "nsi_utils.h"
 
 uint64_t nsi_simu_time; /* The actual time as known by the HW models */
 static uint64_t end_of_time = NSI_NEVER; /* When will this device stop */
@@ -75,7 +76,8 @@ static void nsi_hws_set_sig_handler(void)
 static void nsi_hws_sleep_until_next_event(void)
 {
 	if (next_timer_time >= nsi_simu_time) { /* LCOV_EXCL_BR_LINE */
-		nsi_simu_time = next_timer_time;
+		/* Never advance past the end of time, even if the next event lies beyond it */
+		nsi_simu_time = NSI_MIN(next_timer_time, end_of_time);
 	} else {
 		/* LCOV_EXCL_START */
 		nsi_print_warning("next_timer_time corrupted (%"PRIu64"<= %"
