@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "nsi_tracing.h"
+#include "nsi_utils.h"
 #include "nsi_cmdline.h"
 #include "nsi_cmdline_internal.h"
 #include "nsi_cpu_es_if.h"
@@ -282,6 +283,31 @@ static void nsi_cmd_gen_switch_syntax(char *buf, int size,
 }
 
 /**
+ * printf() like function for the help message.
+ * Output is collected into whole lines, which are printed through the trace
+ * backend. Returns the number of characters of the formatted string.
+ */
+static int print_help(const char *format, ...)
+{
+	static char line[2 * _MAX_LINE_WIDTH];
+	static size_t used;
+	va_list arguments;
+	int count;
+
+	va_start(arguments, format);
+	count = vsnprintf(&line[used], sizeof(line) - used, format, arguments);
+	va_end(arguments);
+	if (count > 0) {
+		used = NSI_MIN(used + count, sizeof(line) - 1);
+	}
+	if ((used > 0) && (line[used - 1] == '\n')) {
+		nsi_print_trace("%s", line);
+		used = 0;
+	}
+	return count;
+}
+
+/**
  * Print short list of available switches
  */
 void nsi_cmd_print_switches_help(struct args_struct_t args_struct[])
@@ -289,7 +315,7 @@ void nsi_cmd_print_switches_help(struct args_struct_t args_struct[])
 	int count = 0;
 	int printed_in_line = strlen(_HELP_SWITCH) + 1;
 
-	fprintf(stdout, "%s ", _HELP_SWITCH);
+	print_help("%s ", _HELP_SWITCH);
 
 	while (args_struct[count].option != NULL) {
 		char stringy[_MAX_STRINGY_LEN];
@@ -298,16 +324,16 @@ void nsi_cmd_print_switches_help(struct args_struct_t args_struct[])
 				      &args_struct[count]);
 
 		if (printed_in_line + strlen(stringy) > _MAX_LINE_WIDTH) {
-			fprintf(stdout, "\n");
+			print_help("\n");
 			printed_in_line = 0;
 		}
 
-		fprintf(stdout, "%s", stringy);
+		print_help("%s", stringy);
 		printed_in_line += strlen(stringy);
 		count++;
 	}
 
-	fprintf(stdout, "\n");
+	print_help("\n");
 }
 
 /**
@@ -322,7 +348,7 @@ void nsi_cmd_print_long_help(struct args_struct_t args_struct[])
 
 	nsi_cmd_print_switches_help(args_struct);
 
-	fprintf(stdout, "\n %-*s:%s\n", _LONG_HELP_ALIGN-1,
+	print_help("\n %-*s:%s\n", _LONG_HELP_ALIGN-1,
 		_HELP_SWITCH, _HELP_DESCR);
 
 	while (args_struct[count].option != NULL) {
@@ -333,27 +359,27 @@ void nsi_cmd_print_long_help(struct args_struct_t args_struct[])
 		nsi_cmd_gen_switch_syntax(stringy, _MAX_STRINGY_LEN,
 				      &args_struct[count]);
 
-		ret = fprintf(stdout, " %-*s:", _LONG_HELP_ALIGN-1, stringy);
+		ret = print_help(" %-*s:", _LONG_HELP_ALIGN-1, stringy);
 		printed_in_line = ret;
 		printed_right = 0;
 		toprint = args_struct[count].descript;
 		total_to_print = strlen(toprint);
-		ret = fprintf(stdout, "%.*s\n",
+		ret = print_help("%.*s\n",
 				_MAX_LINE_WIDTH - printed_in_line,
 				&toprint[printed_right]);
 		printed_right += ret - 1;
 
 		while (printed_right < total_to_print) {
-			fprintf(stdout, "%*s", _LONG_HELP_ALIGN, "");
-			ret = fprintf(stdout, "%.*s\n",
+			print_help("%*s", _LONG_HELP_ALIGN, "");
+			ret = print_help("%.*s\n",
 				      _MAX_LINE_WIDTH - _LONG_HELP_ALIGN,
 				      &toprint[printed_right]);
 			printed_right += ret - 1;
 		}
 		count++;
 	}
-	fprintf(stdout, "\n");
-	fprintf(stdout, "Note that which options are available depends on the "
+	print_help("\n");
+	print_help("Note that which options are available depends on the "
 		"enabled features/drivers\n\n");
 }
 

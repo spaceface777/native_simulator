@@ -26,6 +26,7 @@
 #include "irq_ctrl.h"
 #include "nsi_tasks.h"
 #include "nsi_hws_models_if.h"
+#include "nsi_host_time.h"
 
 #define DEBUG_NP_TIMER 0
 
@@ -134,9 +135,9 @@ static void hwtimer_update_timer(void)
 static inline void host_clock_gettime(struct timespec *tv)
 {
 #if defined(CLOCK_MONOTONIC_RAW)
-	clock_gettime(CLOCK_MONOTONIC_RAW, tv);
+	nsi_host_clock_gettime(CLOCK_MONOTONIC_RAW, tv);
 #else
-	clock_gettime(CLOCK_MONOTONIC, tv);
+	nsi_host_clock_gettime(CLOCK_MONOTONIC, tv);
 #endif
 }
 
@@ -179,7 +180,7 @@ static void hwtimer_init(void)
 		struct timespec tv;
 		uint64_t realhosttime;
 
-		clock_gettime(CLOCK_REALTIME, &tv);
+		nsi_host_clock_gettime(CLOCK_REALTIME, &tv);
 		realhosttime = (uint64_t)tv.tv_sec * 1e6 + tv.tv_nsec / 1000;
 
 		rtc_offset += realhosttime;
@@ -269,7 +270,7 @@ static void hwtimer_rt_timer_reached(void)
 		requested_time.tv_sec  = diff / 1e6;
 		requested_time.tv_nsec = (diff - requested_time.tv_sec*1e6)*1e3;
 
-		(void) nanosleep(&requested_time, &remaining);
+		(void) nsi_host_nanosleep(&requested_time, &remaining);
 	}
 
 	hw_timer_rt_timer += rt_period;
